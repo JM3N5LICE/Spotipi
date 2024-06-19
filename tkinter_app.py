@@ -31,11 +31,17 @@ class MultiPageApp(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
-        self.container = tk.Frame(self)
+        self.configure(bg='gray20')  # Set the background color of the main window
+        self.container = tk.Frame(self, bg='gray20')
         self.container.pack(side="top", fill="both", expand=True)
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
 
         self.pages = {}
         self.page_order = ["Page1", "Page2", "Page3"]
+
+        # Apply styles
+        self.apply_styles()
 
         for PageClass in (Page1, Page2, Page3):
             page_name = PageClass.__name__
@@ -54,8 +60,22 @@ class MultiPageApp(tk.Tk):
         self.drag_start_x = 0
 
         # Add a button to launch the web page
-        launch_button = tk.Button(self, text="Open Web Page", command=self.launch_web_page)
-        launch_button.pack(side="bottom")
+        launch_button = tk.Button(self, text="Open Web Page", command=self.launch_web_page, bg="#4CAF50", fg="white", font=("Helvetica", 12, "bold"))
+        launch_button.pack(side="bottom", pady=10)
+
+        # Make the window full screen
+        try:
+            self.state('zoomed')  # For Windows
+        except:
+            self.attributes('-fullscreen', True)  # Cross-platform fullscreen
+
+        # Center the window on the screen
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
 
     def show_page(self, page_name):
         page = self.pages[page_name]
@@ -81,21 +101,55 @@ class MultiPageApp(tk.Tk):
     def launch_web_page(self):
         webbrowser.open('http://127.0.0.1:8888')
 
+    def apply_styles(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+
+        style.configure("TButton",
+                        background="#4CAF50",
+                        foreground="white",
+                        font=("Helvetica", 12, "bold"),
+                        padding=10)
+        style.map("TButton",
+                  background=[('active', '#45a049')])
+
+        style.configure("TLabel",
+                        font=("Helvetica", 16),
+                        foreground="white",  # Change text color to white
+                        background='gray20')  # Change background to match the main window
+
+        style.configure("Treeview",
+                        background="#D3D3D3",
+                        foreground="black",
+                        rowheight=25,
+                        fieldbackground="#D3D3D3")
+        style.map("Treeview",
+                  background=[('selected', '#347083')])
+
+        style.configure("Treeview.Heading",
+                        font=("Helvetica", 14, "bold"),
+                        background="#D3D3D3")
+
 class Page1(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, bg='gray20')  # Set background color
         self.controller = controller
 
-        label = tk.Label(self, text="Page 1: Time Display")
-        label.pack()
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
 
-        self.time_label = tk.Label(self, text="", font=("Helvetica", 48))
-        self.time_label.pack()
+        label = ttk.Label(self, text="Page 1: Time Display", style="TLabel")
+        label.grid(row=0, column=0, pady=10, sticky="n")
+
+        self.time_label = tk.Label(self, text="", font=("Helvetica", 48), fg="white", bg="gray20")
+        self.time_label.grid(row=1, column=0, pady=20, sticky="n")
 
         self.update_time()
 
-        button = tk.Button(self, text="Go to Page 2", command=lambda: controller.show_page("Page2"))
-        button.pack()
+        button = ttk.Button(self, text="Go to Page 2", command=lambda: controller.show_page("Page2"))
+        button.grid(row=2, column=0, pady=10, sticky="s")
 
     def update_time(self):
         current_time = time.strftime("%H:%M:%S")
@@ -104,11 +158,18 @@ class Page1(tk.Frame):
 
 class Page2(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, bg='gray20')  # Set background color
         self.controller = controller
 
-        label = tk.Label(self, text="Page 2: Music Control")
-        label.pack()
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
+        self.rowconfigure(3, weight=1)
+        self.rowconfigure(4, weight=1)
+
+        label = ttk.Label(self, text="Page 2: Music Control", style="TLabel")
+        label.grid(row=0, column=0, pady=10, sticky="n")
 
         # Load and resize custom icons from the images folder
         self.play_icon = self.load_and_resize_icon("images/play2.png", 50, 50)
@@ -117,17 +178,17 @@ class Page2(tk.Frame):
         self.prev_icon = self.load_and_resize_icon("images/previous.png", 50, 50)
 
         # Create buttons with custom icons
-        button_play = tk.Button(self, image=self.play_icon, command=self.play_music)
-        button_play.pack()
+        button_play = ttk.Button(self, image=self.play_icon, command=self.play_music)
+        button_play.grid(row=1, column=0, pady=10, sticky="n")
 
-        button_pause = tk.Button(self, image=self.pause_icon, command=self.pause_music)
-        button_pause.pack()
+        button_pause = ttk.Button(self, image=self.pause_icon, command=self.pause_music)
+        button_pause.grid(row=2, column=0, pady=10, sticky="n")
 
-        button_skip = tk.Button(self, image=self.skip_icon, command=self.skip_music)
-        button_skip.pack()
+        button_skip = ttk.Button(self, image=self.skip_icon, command=self.skip_music)
+        button_skip.grid(row=3, column=0, pady=10, sticky="n")
 
-        button_prev = tk.Button(self, image=self.prev_icon, command=self.prev_music)
-        button_prev.pack()
+        button_prev = ttk.Button(self, image=self.prev_icon, command=self.prev_music)
+        button_prev.grid(row=4, column=0, pady=10, sticky="n")
 
     def load_and_resize_icon(self, path, width, height):
         image = Image.open(path)
@@ -152,16 +213,19 @@ class Page2(tk.Frame):
 
 class Page3(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent, bg='gray20')  # Set background color
         self.controller = controller
 
-        self.configure(bg='gray20')
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=4)
 
         playlist_frame = tk.Frame(self, bg='gray20')
-        playlist_frame.pack(side="left", expand=True, fill='both', padx=10, pady=10)
+        playlist_frame.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=10, pady=10)
 
         track_frame = tk.Frame(self, bg='gray20')
-        track_frame.pack(side="right", expand=True, fill='both', padx=10, pady=10)
+        track_frame.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=10, pady=10)
 
         columns = ("Playlist Name",)
         self.playlist_tree = ttk.Treeview(playlist_frame, columns=columns, show='headings', style="Custom.Treeview")
@@ -178,7 +242,7 @@ class Page3(tk.Frame):
         self.track_tree.bind('<<TreeviewSelect>>', self.on_track_select)
 
         self.song_label = tk.Label(self, text="Currently Playing: Song Name - Artist", font=("Helvetica", 20), fg="white", bg="gray20")
-        self.song_label.pack(side="bottom", pady=10)
+        self.song_label.grid(row=1, column=0, columnspan=2, pady=10, sticky="s")
 
         self.load_playlists()
 
@@ -224,7 +288,6 @@ class Page3(tk.Frame):
         start_index = self.tracks_list.index(track_uri)
         sp.start_playback(uris=self.tracks_list[start_index:])
         print(f"Playing track {track_uri}...")
-
 
 def startTkinter():
     app = MultiPageApp()
