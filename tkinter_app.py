@@ -63,12 +63,8 @@ class MultiPageApp(tk.Tk):
         self.drag_start_x = 0
 
         # Add a hamburger menu button
-        self.menu_icon = Image.open("images/menu.png")
-        self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
-        self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
-
+        self.menu_icon = self.load_and_resize_icon("images/menu.png", 50, 50)
         menu_button = tk.Button(self, image=self.menu_icon, command=self.show_popup_menu, bg="#4CAF50", bd=2.5, relief="solid")
-        menu_button.image = self.menu_icon
         menu_button.pack(side="bottom", pady=10)
 
         # Make the window full screen
@@ -78,6 +74,14 @@ class MultiPageApp(tk.Tk):
             print(f"Error setting fullscreen: {e}")
 
         # Center the window on the screen
+        self.center_window()
+
+    def load_and_resize_icon(self, path, width, height):
+        image = Image.open(path)
+        image = image.resize((width, height), Image.LANCZOS)
+        return ImageTk.PhotoImage(image)
+
+    def center_window(self):
         self.update_idletasks()
         width = self.winfo_width()
         height = self.winfo_height()
@@ -260,10 +264,10 @@ class Page2(tk.Frame):
         control_frame = tk.Frame(self, bg='gray20')
         control_frame.grid(row=2, column=0, pady=10)
 
-        self.play_icon = self.load_and_resize_icon("images/play2.png", 35, 35)
-        self.pause_icon = self.load_and_resize_icon("images/pause2.png", 35, 35)
-        self.skip_icon = self.load_and_resize_icon("images/skip.png", 35, 35)
-        self.prev_icon = self.load_and_resize_icon("images/previous.png", 35, 35)
+        self.play_icon = controller.load_and_resize_icon("images/play2.png", 35, 35)
+        self.pause_icon = controller.load_and_resize_icon("images/pause2.png", 35, 35)
+        self.skip_icon = controller.load_and_resize_icon("images/skip.png", 35, 35)
+        self.prev_icon = controller.load_and_resize_icon("images/previous.png", 35, 35)
 
         self.button_prev = tk.Button(control_frame, image=self.prev_icon, command=self.prev_music, bg="gray20", bd=0)
         self.button_prev.grid(row=0, column=0, padx=10)
