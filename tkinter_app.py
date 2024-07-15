@@ -180,18 +180,18 @@ class MultiPageApp(tk.Tk):
         style.configure("Treeview",
                         background="#D3D3D3",
                         foreground="black",
-                        rowheight=50,
-                        font=("Helvetica", 18))
+                        rowheight=30,
+                        font=("Helvetica", 12))
         style.map("Treeview",
                   background=[('selected', '#347083')])
 
         style.configure("Treeview.Heading",
-                        font=("Helvetica", 18, "bold"),
+                        font=("Helvetica", 14, "bold"),
                         background="#D3D3D3")
         
         style.configure("Custom.Treeview", 
-                        font=("Helvetica", 18),
-                        rowheight=50)
+                        font=("Helvetica", 14),
+                        rowheight=30)
 
 class Page1(tk.Frame):
     def __init__(self, parent, controller):
@@ -205,10 +205,10 @@ class Page1(tk.Frame):
         self.rowconfigure(3, weight=1)
         self.rowconfigure(4, weight=1)
 
-        self.time_label = tk.Label(self, text="", font=("Helvetica", 100), fg="grey", bg="gray20")
+        self.time_label = tk.Label(self, text="", font=("Helvetica", 50), fg="grey", bg="gray20")
         self.time_label.grid(row=3, column=0, pady=20, sticky="n")
 
-        self.song_label = tk.Label(self, text="", font=("Helvetica", 20), fg="grey", bg="gray20")
+        self.song_label = tk.Label(self, text="", font=("Helvetica", 16), fg="grey", bg="gray20")
         self.song_label.grid(row=4, column=0, pady=10, sticky="s")
 
         self.update_time()
@@ -251,7 +251,7 @@ class Page2(tk.Frame):
         label = ttk.Label(self, text="Page 2: Music Control", style="TLabel")
         label.grid(row=0, column=0, pady=10, sticky="n")
 
-        self.album_art_frame = tk.Frame(self, bg='#4CAF50', width=500, height=500)
+        self.album_art_frame = tk.Frame(self, bg='#4CAF50', width=250, height=250)
         self.album_art_frame.grid(row=1, column=0, pady=10)
         self.album_art_frame.grid_propagate(False)
 
@@ -261,10 +261,10 @@ class Page2(tk.Frame):
         control_frame = tk.Frame(self, bg='gray20')
         control_frame.grid(row=2, column=0, pady=10)
 
-        self.play_icon = self.load_and_resize_icon("images/play2.png", 70, 70)
-        self.pause_icon = self.load_and_resize_icon("images/pause2.png", 70, 70)
-        self.skip_icon = self.load_and_resize_icon("images/skip.png", 70, 70)
-        self.prev_icon = self.load_and_resize_icon("images/previous.png", 70, 70)
+        self.play_icon = self.load_and_resize_icon("images/play2.png", 35, 35)
+        self.pause_icon = self.load_and_resize_icon("images/pause2.png", 35, 35)
+        self.skip_icon = self.load_and_resize_icon("images/skip.png", 35, 35)
+        self.prev_icon = self.load_and_resize_icon("images/previous.png", 35, 35)
 
         self.button_prev = tk.Button(control_frame, image=self.prev_icon, command=self.prev_music, bg="gray20", bd=0)
         self.button_prev.grid(row=0, column=0, padx=10)
@@ -279,12 +279,12 @@ class Page2(tk.Frame):
         self.button_skip = tk.Button(control_frame, image=self.skip_icon, command=self.skip_music, bg="gray20", bd=0)
         self.button_skip.grid(row=0, column=3, padx=10)
 
-        self.song_label = tk.Label(self, text="No music playing", font=("Helvetica", 20), fg="grey", bg="gray20")
+        self.song_label = tk.Label(self, text="No music playing", font=("Helvetica", 16), fg="grey", bg="gray20")
         self.song_label.grid(row=3, column=0, pady=10, sticky="s")
 
         self.last_track_id = None
 
-        self.placeholder_image = self.create_placeholder_image(500, 500)
+        self.placeholder_image = self.create_placeholder_image(250, 250)
 
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
@@ -350,7 +350,7 @@ class Page2(tk.Frame):
         image_byt = requests.get(url).content
         image_b64 = base64.b64encode(image_byt)
         image_open = Image.open(io.BytesIO(base64.b64decode(image_b64)))
-        image_resized = image_open.resize((500, 500), Image.LANCZOS)
+        image_resized = image_open.resize((250, 250), Image.LANCZOS)
         album_art_image = ImageTk.PhotoImage(image_resized)
         self.album_art_label.config(image=album_art_image)
         self.album_art_label.image = album_art_image
@@ -386,23 +386,23 @@ class Page3(tk.Frame):
                         background="black",
                         foreground="grey",
                         fieldbackground="black",
-                        font=("Helvetica", 18),
+                        font=("Helvetica", 14),
                         bordercolor="#4CAF50",
-                        borderwidth=4)
+                        borderwidth=2)
         style.map("Custom.Treeview",
                   background=[('selected', '#347083')])
 
         style.configure("Custom.Treeview.Heading",
                         background="black",
                         foreground="grey",
-                        font=("Helvetica", 18, "bold"),
+                        font=("Helvetica", 14, "bold"),
                         bordercolor="#4CAF50",
-                        borderwidth=4)
+                        borderwidth=2)
 
         columns = ("Playlist Name",)
         self.playlist_tree = ttk.Treeview(playlist_frame, columns=columns, show='headings', style="Custom.Treeview")
         self.playlist_tree.heading("Playlist Name", text="Playlist Name")
-        self.playlist_tree.column("Playlist Name", minwidth=0, width=300)
+        self.playlist_tree.column("Playlist Name", minwidth=0, width=150)
         self.playlist_tree.pack(expand=True, fill='both')
 
         self.playlist_tree.bind('<<TreeviewSelect>>', self.on_playlist_select)
@@ -410,12 +410,12 @@ class Page3(tk.Frame):
         columns = ("Track Name",)
         self.track_tree = ttk.Treeview(track_frame, columns=columns, show='headings', style="Custom.Treeview")
         self.track_tree.heading("Track Name", text="Track Name")
-        self.track_tree.column("Track Name", minwidth=0, width=600)
+        self.track_tree.column("Track Name", minwidth=0, width=300)
         self.track_tree.pack(expand=True, fill='both')
 
         self.track_tree.bind('<<TreeviewSelect>>', self.on_track_select)
 
-        self.song_label = tk.Label(self, text="Currently Playing: Song Name - Artist", font=("Helvetica", 20), fg="grey", bg="gray20")
+        self.song_label = tk.Label(self, text="Currently Playing: Song Name - Artist", font=("Helvetica", 16), fg="grey", bg="gray20")
         self.song_label.grid(row=2, column=0, columnspan=2, pady=10, sticky="s")
 
         self.load_playlists()
