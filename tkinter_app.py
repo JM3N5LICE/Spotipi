@@ -62,14 +62,6 @@ class MultiPageApp(tk.Tk):
 
         self.drag_start_x = 0
 
-        # Add a button to launch the web page
-        launch_button = tk.Button(self, text="Open Web Page", command=self.launch_web_page, bg="#4CAF50", fg="white", font=("Helvetica", 12, "bold"))
-        launch_button.pack(side="bottom", pady=10)
-
-        # Add a shutdown button
-        shutdown_button = tk.Button(self, text="Shutdown", command=self.shutdown, bg="#FF0000", fg="white", font=("Helvetica", 12, "bold"))
-        shutdown_button.pack(side="bottom", pady=10)
-
         # Add a hamburger menu button
         self.menu_icon = Image.open("images/menu.png")
         self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
@@ -125,6 +117,7 @@ class MultiPageApp(tk.Tk):
         popup_menu = tk.Menu(self, tearoff=0)
         popup_menu.add_command(label="Shutdown", command=self.shutdown)
         popup_menu.add_command(label="Switch Device", command=self.show_devices)
+        popup_menu.add_command(label="Launch Web Page", command=self.launch_web_page)
 
         try:
             x = self.winfo_rootx() + self.winfo_width() - 100  # Position near the hamburger button
@@ -137,14 +130,31 @@ class MultiPageApp(tk.Tk):
         devices = sp.devices()
         device_list = devices.get('devices', [])
 
+        for device in device_list:
+            print(f"Device ID: {device.get('id')}")
+            print(f"Name: {device.get('name')}")
+            print(f"Type: {device.get('type')}")
+            print(f"Active: {device.get('is_active')}")
+            print(f"Volume Percent: {device.get('volume_percent')}")
+            print(f"---")
+
         device_window = tk.Toplevel(self)
         device_window.title("Available Devices")
 
-        for device in device_list:
-            device_name = device.get('name', 'Unknown Device')
-            device_id = device.get('id')
-            device_button = tk.Button(device_window, text=device_name, command=lambda id=device_id: self.transfer_playback(id))
-            device_button.pack(pady=5)
+        if not device_list:
+            no_device_label = tk.Label(device_window, text="No available devices.", font=("Helvetica", 16))
+            no_device_label.pack(pady=20)
+        else:
+            for device in device_list:
+                device_id = device.get('id')
+                if device_id == "3cce004ba49b013d7a6f54aeb01eed318f834c97":
+                    continue  # Skip this device
+                device_name = device.get('name', 'Unknown Device')
+                device_button = tk.Button(device_window, text=device_name, command=lambda id=device_id: self.transfer_playback(id))
+                device_button.pack(pady=5)
+
+                print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
+
 
     def transfer_playback(self, device_id):
         sp.transfer_playback(device_id)
@@ -156,7 +166,7 @@ class MultiPageApp(tk.Tk):
 
         style.configure("TButton",
                         background="#4CAF50",
-                        foreground="white",
+                        foreground="grey",
                         font=("Helvetica", 12, "bold"),
                         padding=10)
         style.map("TButton",
@@ -164,14 +174,14 @@ class MultiPageApp(tk.Tk):
 
         style.configure("TLabel",
                         font=("Helvetica", 16),
-                        foreground="white",  # Change text color to white
-                        background='gray20')  # Change background to match the main window
+                        foreground="grey",
+                        background='gray20')
 
         style.configure("Treeview",
                         background="#D3D3D3",
                         foreground="black",
-                        rowheight=50,  # Increase row height for touch screen
-                        font=("Helvetica", 18))  # Increase font size for readability
+                        rowheight=50,
+                        font=("Helvetica", 18))
         style.map("Treeview",
                   background=[('selected', '#347083')])
 
@@ -180,38 +190,55 @@ class MultiPageApp(tk.Tk):
                         background="#D3D3D3")
         
         style.configure("Custom.Treeview", 
-                        font=("Helvetica", 18),  # Adjust font size for better readability
-                        rowheight=50)  # Increase row height for touch screen
+                        font=("Helvetica", 18),
+                        rowheight=50)
 
 class Page1(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent, bg='gray20')  # Set background color
+        tk.Frame.__init__(self, parent, bg='gray20')
         self.controller = controller
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
+        self.rowconfigure(3, weight=1)
+        self.rowconfigure(4, weight=1)
 
-        label = ttk.Label(self, text="Page 1: Time Display", style="TLabel")
-        label.grid(row=0, column=0, pady=10, sticky="n")
+        self.time_label = tk.Label(self, text="", font=("Helvetica", 100), fg="grey", bg="gray20")
+        self.time_label.grid(row=3, column=0, pady=20, sticky="n")
 
-        self.time_label = tk.Label(self, text="", font=("Helvetica", 48), fg="white", bg="gray20")
-        self.time_label.grid(row=1, column=0, pady=20, sticky="n")
+        self.song_label = tk.Label(self, text="", font=("Helvetica", 20), fg="grey", bg="gray20")
+        self.song_label.grid(row=4, column=0, pady=10, sticky="s")
 
         self.update_time()
-
-        button = ttk.Button(self, text="Go to Page 2", command=lambda: controller.show_page("Page2"))
-        button.grid(row=2, column=0, pady=10, sticky="s")
+        self.update_album_art_and_song()
+        self.after(5000, self.update_periodically)
 
     def update_time(self):
         current_time = time.strftime("%H:%M:%S")
         self.time_label.config(text=current_time)
         self.after(1000, self.update_time)
 
+    def update_album_art_and_song(self):
+        try:
+            current_track = sp.current_playback()
+            if current_track and current_track['item']:
+                track_name = current_track['item']['name']
+                artist_name = current_track['item']['artists'][0]['name']
+                self.song_label.config(text=f"{track_name} - {artist_name}")
+            else:
+                self.song_label.config(text="")
+        except Exception as e:
+            print(f"Error updating song: {e}")
+
+    def update_periodically(self):
+        self.update_album_art_and_song()
+        self.after(5000, self.update_periodically)
+
 class Page2(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent, bg='gray20')  # Set background color
+        tk.Frame.__init__(self, parent, bg='gray20')
         self.controller = controller
 
         self.columnconfigure(0, weight=1)
@@ -224,23 +251,21 @@ class Page2(tk.Frame):
         label = ttk.Label(self, text="Page 2: Music Control", style="TLabel")
         label.grid(row=0, column=0, pady=10, sticky="n")
 
-        self.album_art_frame = tk.Frame(self, bg='orange', width=500, height=500)
+        self.album_art_frame = tk.Frame(self, bg='#4CAF50', width=500, height=500)
         self.album_art_frame.grid(row=1, column=0, pady=10)
         self.album_art_frame.grid_propagate(False)
 
-        self.album_art_label = tk.Label(self.album_art_frame, bg='orange')
+        self.album_art_label = tk.Label(self.album_art_frame, bg='#4CAF50')
         self.album_art_label.pack(expand=True, fill='both')
 
         control_frame = tk.Frame(self, bg='gray20')
         control_frame.grid(row=2, column=0, pady=10)
 
-        # Load and resize custom icons from the images folder
         self.play_icon = self.load_and_resize_icon("images/play2.png", 70, 70)
         self.pause_icon = self.load_and_resize_icon("images/pause2.png", 70, 70)
         self.skip_icon = self.load_and_resize_icon("images/skip.png", 70, 70)
         self.prev_icon = self.load_and_resize_icon("images/previous.png", 70, 70)
 
-        # Create buttons with custom icons
         self.button_prev = tk.Button(control_frame, image=self.prev_icon, command=self.prev_music, bg="gray20", bd=0)
         self.button_prev.grid(row=0, column=0, padx=10)
 
@@ -254,15 +279,15 @@ class Page2(tk.Frame):
         self.button_skip = tk.Button(control_frame, image=self.skip_icon, command=self.skip_music, bg="gray20", bd=0)
         self.button_skip.grid(row=0, column=3, padx=10)
 
-        self.song_label = tk.Label(self, text="Song Name - Artist", font=("Helvetica", 20), fg="white", bg="gray20")
+        self.song_label = tk.Label(self, text="No music playing", font=("Helvetica", 20), fg="grey", bg="gray20")
         self.song_label.grid(row=3, column=0, pady=10, sticky="s")
 
-        # Initialize the last track ID
         self.last_track_id = None
 
-        # Update the album art and song label periodically
+        self.placeholder_image = self.create_placeholder_image(500, 500)
+
         self.update_album_art_and_song()
-        self.after(5000, self.update_periodically)  # Update every 5 seconds
+        self.after(5000, self.update_periodically)
 
     def load_and_resize_icon(self, path, width, height):
         image = Image.open(path)
@@ -298,7 +323,7 @@ class Page2(tk.Frame):
             current_track = sp.current_playback()
             if current_track and current_track['item']:
                 track_id = current_track['item']['id']
-                if track_id != self.last_track_id:  # Only update if the track has changed
+                if track_id != self.last_track_id:
                     self.last_track_id = track_id
                     track_name = current_track['item']['name']
                     artist_name = current_track['item']['artists'][0]['name']
@@ -309,17 +334,15 @@ class Page2(tk.Frame):
                         album_art_url = album_images[0]['url']
                         self.display_album_art(album_art_url)
 
-                # Update play/pause button based on playback state
                 if current_track['is_playing']:
                     self.button_play.grid_remove()
                     self.button_pause.grid()
                 else:
                     self.button_pause.grid_remove()
                     self.button_play.grid()
-
             else:
                 self.song_label.config(text="No music playing")
-                self.album_art_label.config(image='')
+                self.album_art_label.config(image=self.placeholder_image)
         except Exception as e:
             print(f"Error updating album art and song: {e}")
 
@@ -332,20 +355,25 @@ class Page2(tk.Frame):
         self.album_art_label.config(image=album_art_image)
         self.album_art_label.image = album_art_image
 
+    def create_placeholder_image(self, width, height):
+        placeholder = Image.new('RGB', (width, height), 'grey')
+        return ImageTk.PhotoImage(placeholder)
+
     def update_periodically(self):
         self.update_album_art_and_song()
-        self.after(5000, self.update_periodically)  # Update every 5 seconds
+        self.after(5000, self.update_periodically)
 
 
 class Page3(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent, bg='gray20')  # Set background color
+        tk.Frame.__init__(self, parent, bg='gray20')
         self.controller = controller
 
         self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=1)
+        self.columnconfigure(1, weight=2)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=4)
+        self.rowconfigure(2, weight=1)
 
         playlist_frame = tk.Frame(self, bg='gray20')
         playlist_frame.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=10, pady=10)
@@ -353,10 +381,28 @@ class Page3(tk.Frame):
         track_frame = tk.Frame(self, bg='gray20')
         track_frame.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=10, pady=10)
 
+        style = ttk.Style()
+        style.configure("Custom.Treeview",
+                        background="black",
+                        foreground="grey",
+                        fieldbackground="black",
+                        font=("Helvetica", 18),
+                        bordercolor="#4CAF50",
+                        borderwidth=4)
+        style.map("Custom.Treeview",
+                  background=[('selected', '#347083')])
+
+        style.configure("Custom.Treeview.Heading",
+                        background="black",
+                        foreground="grey",
+                        font=("Helvetica", 18, "bold"),
+                        bordercolor="#4CAF50",
+                        borderwidth=4)
+
         columns = ("Playlist Name",)
         self.playlist_tree = ttk.Treeview(playlist_frame, columns=columns, show='headings', style="Custom.Treeview")
         self.playlist_tree.heading("Playlist Name", text="Playlist Name")
-        self.playlist_tree.column("Playlist Name", minwidth=0, width=300)  # Set initial width of playlist column
+        self.playlist_tree.column("Playlist Name", minwidth=0, width=300)
         self.playlist_tree.pack(expand=True, fill='both')
 
         self.playlist_tree.bind('<<TreeviewSelect>>', self.on_playlist_select)
@@ -364,15 +410,22 @@ class Page3(tk.Frame):
         columns = ("Track Name",)
         self.track_tree = ttk.Treeview(track_frame, columns=columns, show='headings', style="Custom.Treeview")
         self.track_tree.heading("Track Name", text="Track Name")
-        self.track_tree.column("Track Name", minwidth=0, width=400)  # Set initial width of track column
+        self.track_tree.column("Track Name", minwidth=0, width=600)
         self.track_tree.pack(expand=True, fill='both')
 
         self.track_tree.bind('<<TreeviewSelect>>', self.on_track_select)
 
-        self.song_label = tk.Label(self, text="Currently Playing: Song Name - Artist", font=("Helvetica", 20), fg="white", bg="gray20")
-        self.song_label.grid(row=1, column=0, columnspan=2, pady=10, sticky="s")
+        self.song_label = tk.Label(self, text="Currently Playing: Song Name - Artist", font=("Helvetica", 20), fg="grey", bg="gray20")
+        self.song_label.grid(row=2, column=0, columnspan=2, pady=10, sticky="s")
 
         self.load_playlists()
+
+        # Initialize the last track ID
+        self.last_track_id = None
+
+        # Update the song label periodically
+        self.update_song_label()
+        self.after(5000, self.update_periodically)
 
     def load_playlists(self):
         playlists = sp.current_user_playlists()
@@ -388,7 +441,7 @@ class Page3(tk.Frame):
         self.track_tree.delete(*self.track_tree.get_children())
         self.tracks_list = []
         offset = 0
-        limit = 100  # Number of items to fetch per request
+        limit = 100
 
         while True:
             tracks = sp.playlist_tracks(playlist_id, offset=offset, limit=limit)
@@ -396,7 +449,7 @@ class Page3(tk.Frame):
                 break
             
             for track in tracks['items']:
-                if track['track'] is not None:  # Check if track is not None
+                if track['track'] is not None:
                     track_uri = track['track']['uri']
                     track_name = track['track']['name']
                     artist_name = track['track']['artists'][0]['name']
@@ -405,8 +458,8 @@ class Page3(tk.Frame):
                     self.track_tree.insert("", "end", values=(display_text,), tags=(track_uri,))
             
             offset += len(tracks['items'])
-            if len(tracks['items']) < limit:
-                break  # If less than limit, we have fetched all tracks
+            if len (tracks['items']) < limit:
+                break
 
         self.current_playlist_id = playlist_id
         print(f"Total tracks loaded: {len(self.tracks_list)}")
@@ -417,13 +470,33 @@ class Page3(tk.Frame):
         self.play_track(track_uri)
 
     def play_track(self, track_uri):
-        start_index = self.tracks_list.index(track_uri)
-        sp.start_playback(uris=self.tracks_list[start_index:])
+        playlist_uri = f"spotify:playlist:{self.current_playlist_id}"
+        sp.start_playback(context_uri=playlist_uri, offset={"uri": track_uri})
         track_info = sp.track(track_uri)
         track_name = track_info['name']
         artist_name = track_info['artists'][0]['name']
         self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
         print(f"Playing track {track_uri}...")
+
+    def update_song_label(self):
+        try:
+            current_track = sp.current_playback()
+            if current_track and current_track['item']:
+                track_id = current_track['item']['id']
+                if track_id != self.last_track_id:
+                    self.last_track_id = track_id
+                    track_name = current_track['item']['name']
+                    artist_name = current_track['item']['artists'][0]['name']
+                    self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
+            else:
+                self.song_label.config(text="Currently Playing: No music playing")
+        except Exception as e:
+            print(f"Error updating song: {e}")
+
+    def update_periodically(self):
+        self.update_song_label()
+        self.after(5000, self.update_periodically)
+
 
 def startTkinter():
     app = MultiPageApp()
