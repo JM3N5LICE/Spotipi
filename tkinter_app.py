@@ -73,10 +73,9 @@ class MultiPageApp(tk.Tk):
 
         # Make the window full screen
         try:
-            self.state('zoomed')  # For Windows
-        except tk.TclError as e:
-            print(f"Error setting state to zoomed: {e}")
             self.attributes('-fullscreen', True)  # Cross-platform fullscreen
+        except tk.TclError as e:
+            print(f"Error setting fullscreen: {e}")
 
         # Center the window on the screen
         self.update_idletasks()
