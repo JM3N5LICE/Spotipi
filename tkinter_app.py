@@ -63,25 +63,22 @@ class MultiPageApp(tk.Tk):
         self.drag_start_x = 0
 
         # Add a hamburger menu button
-        self.menu_icon = self.load_and_resize_icon("images/menu.png", 50, 50)
-        menu_button = tk.Button(self, image=self.menu_icon, command=self.show_popup_menu, bg="#4CAF50", bd=2.5, relief="solid")
+        self.menu_icon = Image.open("images/menu.png")
+        self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
+        self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
+
+        menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu, bg="#4CAF50", bd=2.5, relief="solid")
+        menu_button.image = self.menu_icon
         menu_button.pack(side="bottom", pady=10)
 
         # Make the window full screen
         try:
-            self.attributes('-fullscreen', True)  # Cross-platform fullscreen
+            self.state('zoomed')  # For Windows
         except tk.TclError as e:
-            print(f"Error setting fullscreen: {e}")
+            print(f"Error setting state to zoomed: {e}")
+            self.attributes('-fullscreen', True)  # Cross-platform fullscreen
 
         # Center the window on the screen
-        self.center_window()
-
-    def load_and_resize_icon(self, path, width, height):
-        image = Image.open(path)
-        image = image.resize((width, height), Image.LANCZOS)
-        return ImageTk.PhotoImage(image)
-
-    def center_window(self):
         self.update_idletasks()
         width = self.winfo_width()
         height = self.winfo_height()
@@ -116,18 +113,9 @@ class MultiPageApp(tk.Tk):
     def shutdown(self):
         os.system("sudo poweroff")
 
-    def show_popup_menu(self):
-        popup_menu = tk.Menu(self, tearoff=0)
-        popup_menu.add_command(label="Shutdown", command=self.shutdown)
-        popup_menu.add_command(label="Switch Device", command=self.show_devices)
-        popup_menu.add_command(label="Launch Web Page", command=self.launch_web_page)
-
-        try:
-            x = self.winfo_rootx() + self.winfo_width() - 100  # Position near the hamburger button
-            y = self.winfo_rooty() + 50
-            popup_menu.tk_popup(x, y, 0)
-        finally:
-            popup_menu.grab_release()
+    def toggle_menu(self):
+        page1 = self.pages["Page1"]
+        page1.toggle_menu_buttons()
 
     def show_devices(self):
         devices = sp.devices()
@@ -157,7 +145,6 @@ class MultiPageApp(tk.Tk):
                 device_button.pack(pady=5)
 
                 print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
-
 
     def transfer_playback(self, device_id):
         sp.transfer_playback(device_id)
@@ -214,6 +201,17 @@ class Page1(tk.Frame):
         self.song_label = tk.Label(self, text="", font=("Helvetica", 16), fg="grey", bg="gray20")
         self.song_label.grid(row=4, column=0, pady=10, sticky="s")
 
+        # Create menu buttons
+        self.menu_frame = tk.Frame(self, bg="gray20")
+        self.menu_frame.grid(row=0, column=0, sticky="ne", padx=10, pady=10)
+
+        self.shutdown_button = tk.Button(self.menu_frame, text="Shutdown", command=self.controller.shutdown, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.switch_device_button = tk.Button(self.menu_frame, text="Switch Device", command=self.controller.show_devices, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.launch_web_page_button = tk.Button(self.menu_frame, text="Launch Web Page", command=self.controller.launch_web_page, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+
+        self.menu_buttons = [self.shutdown_button, self.switch_device_button, self.launch_web_page_button]
+        self.menu_visible = False
+
         self.update_time()
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
@@ -238,6 +236,15 @@ class Page1(tk.Frame):
     def update_periodically(self):
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
+
+    def toggle_menu_buttons(self):
+        if self.menu_visible:
+            for button in self.menu_buttons:
+                button.grid_remove()
+        else:
+            for i, button in enumerate(self.menu_buttons):
+                button.grid(row=i, column=0, pady=5)
+        self.menu_visible = not self.menu_visible
 
 class Page2(tk.Frame):
     def __init__(self, parent, controller):
@@ -264,10 +271,10 @@ class Page2(tk.Frame):
         control_frame = tk.Frame(self, bg='gray20')
         control_frame.grid(row=2, column=0, pady=10)
 
-        self.play_icon = controller.load_and_resize_icon("images/play2.png", 35, 35)
-        self.pause_icon = controller.load_and_resize_icon("images/pause2.png", 35, 35)
-        self.skip_icon = controller.load_and_resize_icon("images/skip.png", 35, 35)
-        self.prev_icon = controller.load_and_resize_icon("images/previous.png", 35, 35)
+        self.play_icon = self.load_and_resize_icon("images/play2.png", 35, 35)
+        self.pause_icon = self.load_and_resize_icon("images/pause2.png", 35, 35)
+        self.skip_icon = self.load_and_resize_icon("images/skip.png", 35, 35)
+        self.prev_icon = self.load_and_resize_icon("images/previous.png", 35, 35)
 
         self.button_prev = tk.Button(control_frame, image=self.prev_icon, command=self.prev_music, bg="gray20", bd=0)
         self.button_prev.grid(row=0, column=0, padx=10)
