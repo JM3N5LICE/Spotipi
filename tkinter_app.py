@@ -160,7 +160,11 @@ class Page1(tk.Frame):
         self.menu_buttons = [self.shutdown_button, self.switch_device_button, self.launch_web_page_button]
         self.menu_visible = False
 
-        # Hamburger menu button
+        self.update_time()
+        self.update_album_art_and_song()
+        self.after(5000, self.update_periodically)
+
+        # Add a hamburger menu button at the bottom
         self.menu_icon = Image.open("images/menu.png")
         self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
         self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
@@ -168,10 +172,6 @@ class Page1(tk.Frame):
         menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu_buttons, bg="#4CAF50", bd=2.5, relief="solid")
         menu_button.image = self.menu_icon
         menu_button.grid(row=5, column=0, pady=10)
-
-        self.update_time()
-        self.update_album_art_and_song()
-        self.after(5000, self.update_periodically)
 
     def update_time(self):
         current_time = time.strftime("%H:%M:%S")
@@ -362,13 +362,19 @@ class Page2(tk.Frame):
         threading.Thread(target=fetch_album_art_and_song).start()
 
     def display_album_art(self, url):
-        image_byt = requests.get(url).content
-        image_b64 = base64.b64encode(image_byt)
-        image_open = Image.open(io.BytesIO(base64.b64decode(image_b64)))
-        image_resized = image_open.resize((250, 250), Image.LANCZOS)
-        album_art_image = ImageTk.PhotoImage(image_resized)
-        self.album_art_label.config(image=album_art_image)
-        self.album_art_label.image = album_art_image
+        def fetch_album_art():
+            try:
+                image_byt = requests.get(url).content
+                image_b64 = base64.b64encode(image_byt)
+                image_open = Image.open(io.BytesIO(base64.b64decode(image_b64)))
+                image_resized = image_open.resize((250, 250), Image.LANCZOS)
+                album_art_image = ImageTk.PhotoImage(image_resized)
+                self.album_art_label.config(image=album_art_image)
+                self.album_art_label.image = album_art_image
+            except Exception as e:
+                print(f"Error fetching album art: {e}")
+
+        threading.Thread(target=fetch_album_art).start()
 
     def create_placeholder_image(self, width, height):
         placeholder = Image.new('RGB', (width, height), 'grey')
@@ -377,6 +383,7 @@ class Page2(tk.Frame):
     def update_periodically(self):
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
+
 
 class Page3(tk.Frame):
     def __init__(self, parent, controller):
@@ -443,9 +450,12 @@ class Page3(tk.Frame):
 
     def load_playlists(self):
         def fetch_playlists():
-            playlists = sp.current_user_playlists()
-            for playlist in playlists['items']:
-                self.playlist_tree.insert("", "end", values=(playlist['name'],), tags=(playlist['id'],))
+            try:
+                playlists = sp.current_user_playlists()
+                for playlist in playlists['items']:
+                    self.playlist_tree.insert("", "end", values=(playlist['name'],), tags=(playlist['id'],))
+            except Exception as e:
+                print(f"Error fetching playlists: {e}")
 
         threading.Thread(target=fetch_playlists).start()
 
@@ -455,31 +465,37 @@ class Page3(tk.Frame):
         threading.Thread(target=self.load_tracks, args=(playlist_id,)).start()
 
     def load_tracks(self, playlist_id):
-        self.track_tree.delete(*self.track_tree.get_children())
-        self.tracks_list = []
-        offset = 0
-        limit = 100
+        def fetch_tracks():
+            try:
+                self.track_tree.delete(*self.track_tree.get_children())
+                self.tracks_list = []
+                offset = 0
+                limit = 100
 
-        while True:
-            tracks = sp.playlist_tracks(playlist_id, offset=offset, limit=limit)
-            if not tracks['items']:
-                break
-            
-            for track in tracks['items']:
-                if track['track'] is not None:
-                    track_uri = track['track']['uri']
-                    track_name = track['track']['name']
-                    artist_name = track['track']['artists'][0]['name']
-                    display_text = f"{track_name} - {artist_name}"
-                    self.tracks_list.append(track_uri)
-                    self.track_tree.insert("", "end", values=(display_text,), tags=(track_uri,))
-            
-            offset += len(tracks['items'])
-            if len (tracks['items']) < limit:
-                break
+                while True:
+                    tracks = sp.playlist_tracks(playlist_id, offset=offset, limit=limit)
+                    if not tracks['items']:
+                        break
+                    
+                    for track in tracks['items']:
+                        if track['track'] is not None:
+                            track_uri = track['track']['uri']
+                            track_name = track['track']['name']
+                            artist_name = track['track']['artists'][0]['name']
+                            display_text = f"{track_name} - {artist_name}"
+                            self.tracks_list.append(track_uri)
+                            self.track_tree.insert("", "end", values=(display_text,), tags=(track_uri,))
+                    
+                    offset += len(tracks['items'])
+                    if len (tracks['items']) < limit:
+                        break
 
-        self.current_playlist_id = playlist_id
-        print(f"Total tracks loaded: {len(self.tracks_list)}")
+                self.current_playlist_id = playlist_id
+                print(f"Total tracks loaded: {len(self.tracks_list)}")
+            except Exception as e:
+                print(f"Error fetching tracks: {e}")
+
+        threading.Thread(target=fetch_tracks).start()
 
     def on_track_select(self, event):
         selected_item = self.track_tree.selection()[0]
@@ -516,6 +532,7 @@ class Page3(tk.Frame):
     def update_periodically(self):
         self.update_song_label()
         self.after(5000, self.update_periodically)
+
 
 def startTkinter():
     app = MultiPageApp()
