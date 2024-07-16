@@ -98,45 +98,6 @@ class MultiPageApp(tk.Tk):
 
         self.show_page(self.page_order[self.current_page_index])
 
-    def launch_web_page(self):
-        webbrowser.open('http://127.0.0.1:8888')
-
-    def shutdown(self):
-        os.system("sudo poweroff")
-
-    def show_devices(self):
-        devices = sp.devices()
-        device_list = devices.get('devices', [])
-
-        for device in device_list:
-            print(f"Device ID: {device.get('id')}")
-            print(f"Name: {device.get('name')}")
-            print(f"Type: {device.get('type')}")
-            print(f"Active: {device.get('is_active')}")
-            print(f"Volume Percent: {device.get('volume_percent')}")
-            print(f"---")
-
-        device_window = tk.Toplevel(self)
-        device_window.title("Available Devices")
-
-        if not device_list:
-            no_device_label = tk.Label(device_window, text="No available devices.", font=("Helvetica", 16))
-            no_device_label.pack(pady=20)
-        else:
-            for device in device_list:
-                device_id = device.get('id')
-                if device_id == "3cce004ba49b013d7a6f54aeb01eed318f834c97":
-                    continue  # Skip this device
-                device_name = device.get('name', 'Unknown Device')
-                device_button = tk.Button(device_window, text=device_name, command=lambda id=device_id: self.transfer_playback(id))
-                device_button.pack(pady=5)
-
-                print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
-
-    def transfer_playback(self, device_id):
-        sp.transfer_playback(device_id)
-        print(f"Transferred playback to device ID: {device_id}")
-
     def apply_styles(self):
         style = ttk.Style()
         style.theme_use("clam")
@@ -192,19 +153,19 @@ class Page1(tk.Frame):
         self.menu_frame = tk.Frame(self, bg="gray20")
         self.menu_frame.grid(row=0, column=0, sticky="ne", padx=10, pady=10)
 
-        self.shutdown_button = tk.Button(self.menu_frame, text="Shutdown", command=self.controller.shutdown, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
-        self.switch_device_button = tk.Button(self.menu_frame, text="Switch Device", command=self.controller.show_devices, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
-        self.launch_web_page_button = tk.Button(self.menu_frame, text="Launch Web Page", command=self.controller.launch_web_page, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.shutdown_button = tk.Button(self.menu_frame, text="Shutdown", command=self.shutdown, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.switch_device_button = tk.Button(self.menu_frame, text="Switch Device", command=self.show_devices, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.launch_web_page_button = tk.Button(self.menu_frame, text="Launch Web Page", command=self.launch_web_page, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
 
         self.menu_buttons = [self.shutdown_button, self.switch_device_button, self.launch_web_page_button]
         self.menu_visible = False
 
-        # Add a hamburger menu button
+        # Hamburger menu button
         self.menu_icon = Image.open("images/menu.png")
         self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
         self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
 
-        menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu, bg="#4CAF50", bd=2.5, relief="solid")
+        menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu_buttons, bg="#4CAF50", bd=2.5, relief="solid")
         menu_button.image = self.menu_icon
         menu_button.grid(row=5, column=0, pady=10)
 
@@ -218,22 +179,25 @@ class Page1(tk.Frame):
         self.after(1000, self.update_time)
 
     def update_album_art_and_song(self):
-        try:
-            current_track = sp.current_playback()
-            if current_track and current_track['item']:
-                track_name = current_track['item']['name']
-                artist_name = current_track['item']['artists'][0]['name']
-                self.song_label.config(text=f"{track_name} - {artist_name}")
-            else:
-                self.song_label.config(text="")
-        except Exception as e:
-            print(f"Error updating song: {e}")
+        def fetch_album_art_and_song():
+            try:
+                current_track = sp.current_playback()
+                if current_track and current_track['item']:
+                    track_name = current_track['item']['name']
+                    artist_name = current_track['item']['artists'][0]['name']
+                    self.song_label.config(text=f"{track_name} - {artist_name}")
+                else:
+                    self.song_label.config(text="")
+            except Exception as e:
+                print(f"Error updating song: {e}")
+
+        threading.Thread(target=fetch_album_art_and_song).start()
 
     def update_periodically(self):
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
 
-    def toggle_menu(self):
+    def toggle_menu_buttons(self):
         if self.menu_visible:
             for button in self.menu_buttons:
                 button.grid_remove()
@@ -241,6 +205,48 @@ class Page1(tk.Frame):
             for i, button in enumerate(self.menu_buttons):
                 button.grid(row=i, column=0, pady=5)
         self.menu_visible = not self.menu_visible
+
+    def launch_web_page(self):
+        webbrowser.open('http://127.0.0.1:8888')
+
+    def shutdown(self):
+        os.system("sudo poweroff")
+
+    def show_devices(self):
+        def fetch_devices():
+            devices = sp.devices()
+            device_list = devices.get('devices', [])
+
+            for device in device_list:
+                print(f"Device ID: {device.get('id')}")
+                print(f"Name: {device.get('name')}")
+                print(f"Type: {device.get('type')}")
+                print(f"Active: {device.get('is_active')}")
+                print(f"Volume Percent: {device.get('volume_percent')}")
+                print(f"---")
+
+            device_window = tk.Toplevel(self)
+            device_window.title("Available Devices")
+
+            if not device_list:
+                no_device_label = tk.Label(device_window, text="No available devices.", font=("Helvetica", 16))
+                no_device_label.pack(pady=20)
+            else:
+                for device in device_list:
+                    device_id = device.get('id')
+                    if device_id == "3cce004ba49b013d7a6f54aeb01eed318f834c97":
+                        continue  # Skip this device
+                    device_name = device.get('name', 'Unknown Device')
+                    device_button = tk.Button(device_window, text=device_name, command=lambda id=device_id: self.transfer_playback(id))
+                    device_button.pack(pady=5)
+
+                    print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
+
+        threading.Thread(target=fetch_devices).start()
+
+    def transfer_playback(self, device_id):
+        sp.transfer_playback(device_id)
+        print(f"Transferred playback to device ID: {device_id}")
 
 class Page2(tk.Frame):
     def __init__(self, parent, controller):
@@ -325,32 +331,35 @@ class Page2(tk.Frame):
         print("Going to previous track...")
 
     def update_album_art_and_song(self):
-        try:
-            current_track = sp.current_playback()
-            if current_track and current_track['item']:
-                track_id = current_track['item']['id']
-                if track_id != self.last_track_id:
-                    self.last_track_id = track_id
-                    track_name = current_track['item']['name']
-                    artist_name = current_track['item']['artists'][0]['name']
-                    self.song_label.config(text=f"{track_name} - {artist_name}")
+        def fetch_album_art_and_song():
+            try:
+                current_track = sp.current_playback()
+                if current_track and current_track['item']:
+                    track_id = current_track['item']['id']
+                    if track_id != self.last_track_id:
+                        self.last_track_id = track_id
+                        track_name = current_track['item']['name']
+                        artist_name = current_track['item']['artists'][0]['name']
+                        self.song_label.config(text=f"{track_name} - {artist_name}")
 
-                    album_images = current_track['item']['album']['images']
-                    if album_images:
-                        album_art_url = album_images[0]['url']
-                        self.display_album_art(album_art_url)
+                        album_images = current_track['item']['album']['images']
+                        if album_images:
+                            album_art_url = album_images[0]['url']
+                            self.display_album_art(album_art_url)
 
-                if current_track['is_playing']:
-                    self.button_play.grid_remove()
-                    self.button_pause.grid()
+                    if current_track['is_playing']:
+                        self.button_play.grid_remove()
+                        self.button_pause.grid()
+                    else:
+                        self.button_pause.grid_remove()
+                        self.button_play.grid()
                 else:
-                    self.button_pause.grid_remove()
-                    self.button_play.grid()
-            else:
-                self.song_label.config(text="No music playing")
-                self.album_art_label.config(image=self.placeholder_image)
-        except Exception as e:
-            print(f"Error updating album art and song: {e}")
+                    self.song_label.config(text="No music playing")
+                    self.album_art_label.config(image=self.placeholder_image)
+            except Exception as e:
+                print(f"Error updating album art and song: {e}")
+
+        threading.Thread(target=fetch_album_art_and_song).start()
 
     def display_album_art(self, url):
         image_byt = requests.get(url).content
@@ -368,7 +377,6 @@ class Page2(tk.Frame):
     def update_periodically(self):
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
-
 
 class Page3(tk.Frame):
     def __init__(self, parent, controller):
@@ -434,9 +442,12 @@ class Page3(tk.Frame):
         self.after(5000, self.update_periodically)
 
     def load_playlists(self):
-        playlists = sp.current_user_playlists()
-        for playlist in playlists['items']:
-            self.playlist_tree.insert("", "end", values=(playlist['name'],), tags=(playlist['id'],))
+        def fetch_playlists():
+            playlists = sp.current_user_playlists()
+            for playlist in playlists['items']:
+                self.playlist_tree.insert("", "end", values=(playlist['name'],), tags=(playlist['id'],))
+
+        threading.Thread(target=fetch_playlists).start()
 
     def on_playlist_select(self, event):
         selected_item = self.playlist_tree.selection()[0]
@@ -485,24 +496,26 @@ class Page3(tk.Frame):
         print(f"Playing track {track_uri}...")
 
     def update_song_label(self):
-        try:
-            current_track = sp.current_playback()
-            if current_track and current_track['item']:
-                track_id = current_track['item']['id']
-                if track_id != self.last_track_id:
-                    self.last_track_id = track_id
-                    track_name = current_track['item']['name']
-                    artist_name = current_track['item']['artists'][0]['name']
-                    self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
-            else:
-                self.song_label.config(text="Currently Playing: No music playing")
-        except Exception as e:
-            print(f"Error updating song: {e}")
+        def fetch_song_label():
+            try:
+                current_track = sp.current_playback()
+                if current_track and current_track['item']:
+                    track_id = current_track['item']['id']
+                    if track_id != self.last_track_id:
+                        self.last_track_id = track_id
+                        track_name = current_track['item']['name']
+                        artist_name = current_track['item']['artists'][0]['name']
+                        self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
+                else:
+                    self.song_label.config(text="Currently Playing: No music playing")
+            except Exception as e:
+                print(f"Error updating song: {e}")
+
+        threading.Thread(target=fetch_song_label).start()
 
     def update_periodically(self):
         self.update_song_label()
         self.after(5000, self.update_periodically)
-
 
 def startTkinter():
     app = MultiPageApp()
