@@ -62,15 +62,6 @@ class MultiPageApp(tk.Tk):
 
         self.drag_start_x = 0
 
-        # Add a hamburger menu button
-        self.menu_icon = Image.open("images/menu.png")
-        self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
-        self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
-
-        menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu, bg="#4CAF50", bd=2.5, relief="solid")
-        menu_button.image = self.menu_icon
-        menu_button.pack(side="bottom", pady=10)
-
         # Make the window full screen
         try:
             self.state('zoomed')  # For Windows
@@ -112,10 +103,6 @@ class MultiPageApp(tk.Tk):
 
     def shutdown(self):
         os.system("sudo poweroff")
-
-    def toggle_menu(self):
-        page1 = self.pages["Page1"]
-        page1.toggle_menu_buttons()
 
     def show_devices(self):
         devices = sp.devices()
@@ -212,6 +199,15 @@ class Page1(tk.Frame):
         self.menu_buttons = [self.shutdown_button, self.switch_device_button, self.launch_web_page_button]
         self.menu_visible = False
 
+        # Add a hamburger menu button
+        self.menu_icon = Image.open("images/menu.png")
+        self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
+        self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
+
+        menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu, bg="#4CAF50", bd=2.5, relief="solid")
+        menu_button.image = self.menu_icon
+        menu_button.grid(row=5, column=0, pady=10)
+
         self.update_time()
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
@@ -237,7 +233,7 @@ class Page1(tk.Frame):
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
 
-    def toggle_menu_buttons(self):
+    def toggle_menu(self):
         if self.menu_visible:
             for button in self.menu_buttons:
                 button.grid_remove()
