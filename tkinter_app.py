@@ -62,6 +62,15 @@ class MultiPageApp(tk.Tk):
 
         self.drag_start_x = 0
 
+        # Add a hamburger menu button
+        self.menu_icon = Image.open("images/menu.png")
+        self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
+        self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
+
+        menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu, bg="#4CAF50", bd=2.5, relief="solid")
+        menu_button.image = self.menu_icon
+        menu_button.pack(side="bottom", pady=10)
+
         # Make the window full screen
         try:
             self.state('zoomed')  # For Windows
@@ -104,6 +113,10 @@ class MultiPageApp(tk.Tk):
     def shutdown(self):
         os.system("sudo poweroff")
 
+    def toggle_menu(self):
+        page1 = self.pages["Page1"]
+        page1.toggle_menu_buttons()
+
     def show_devices(self):
         devices = sp.devices()
         device_list = devices.get('devices', [])
@@ -132,7 +145,6 @@ class MultiPageApp(tk.Tk):
                 device_button.pack(pady=5)
 
                 print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
-
 
     def transfer_playback(self, device_id):
         sp.transfer_playback(device_id)
@@ -189,32 +201,20 @@ class Page1(tk.Frame):
         self.song_label = tk.Label(self, text="", font=("Helvetica", 16), fg="grey", bg="gray20")
         self.song_label.grid(row=4, column=0, pady=10, sticky="s")
 
-        # Add a hamburger menu button
-        self.menu_icon = Image.open("images/menu.png")
-        self.menu_icon = self.menu_icon.resize((50, 50), Image.LANCZOS)
-        self.menu_icon = ImageTk.PhotoImage(self.menu_icon)
+        # Create menu buttons
+        self.menu_frame = tk.Frame(self, bg="gray20")
+        self.menu_frame.grid(row=0, column=0, sticky="ne", padx=10, pady=10)
 
-        menu_button = tk.Button(self, image=self.menu_icon, command=self.toggle_menu_buttons, bg="#4CAF50", bd=2.5, relief="solid")
-        menu_button.image = self.menu_icon
-        menu_button.grid(row=5, column=0, pady=10, sticky="s")
+        self.shutdown_button = tk.Button(self.menu_frame, text="Shutdown", command=self.controller.shutdown, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.switch_device_button = tk.Button(self.menu_frame, text="Switch Device", command=self.controller.show_devices, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.launch_web_page_button = tk.Button(self.menu_frame, text="Launch Web Page", command=self.controller.launch_web_page, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
 
-        self.menu_buttons_frame = tk.Frame(self, bg='gray20')
-        self.menu_buttons_frame.grid(row=6, column=0, pady=10, sticky="s")
-        self.menu_buttons_frame.grid_remove()
-
-        tk.Button(self.menu_buttons_frame, text="Shutdown", command=controller.shutdown, bg="gray20", fg="white").pack(pady=5)
-        tk.Button(self.menu_buttons_frame, text="Switch Device", command=controller.show_devices, bg="gray20", fg="white").pack(pady=5)
-        tk.Button(self.menu_buttons_frame, text="Launch Web Page", command=controller.launch_web_page, bg="gray20", fg="white").pack(pady=5)
+        self.menu_buttons = [self.shutdown_button, self.switch_device_button, self.launch_web_page_button]
+        self.menu_visible = False
 
         self.update_time()
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
-
-    def toggle_menu_buttons(self):
-        if self.menu_buttons_frame.winfo_ismapped():
-            self.menu_buttons_frame.grid_remove()
-        else:
-            self.menu_buttons_frame.grid()
 
     def update_time(self):
         current_time = time.strftime("%H:%M:%S")
@@ -236,6 +236,15 @@ class Page1(tk.Frame):
     def update_periodically(self):
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
+
+    def toggle_menu_buttons(self):
+        if self.menu_visible:
+            for button in self.menu_buttons:
+                button.grid_remove()
+        else:
+            for i, button in enumerate(self.menu_buttons):
+                button.grid(row=i, column=0, pady=5)
+        self.menu_visible = not self.menu_visible
 
 class Page2(tk.Frame):
     def __init__(self, parent, controller):
