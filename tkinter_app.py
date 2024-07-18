@@ -165,7 +165,7 @@ class Page1(tk.Frame):
 
         self.update_time()
         self.update_album_art_and_song()
-        self.after(5000, self.update_periodically)
+        self.after(3000, self.update_periodically)
 
         # Add a hamburger menu button at the bottom
         self.menu_icon = Image.open("images/menu.png")
@@ -182,23 +182,17 @@ class Page1(tk.Frame):
         self.after(1000, self.update_time)
 
     def update_album_art_and_song(self):
-        def fetch_album_art_and_song():
-            try:
-                current_track = sp.current_playback()
-                if current_track and current_track['item']:
-                    track_name = current_track['item']['name']
-                    artist_name = current_track['item']['artists'][0]['name']
-                    self.song_label.config(text=f"{track_name} - {artist_name}")
-                else:
-                    self.song_label.config(text="")
-            except Exception as e:
-                print(f"Error updating song: {e}")
-
-        threading.Thread(target=fetch_album_art_and_song).start()
+        current_track = sp.current_playback()
+        if current_track and current_track['item']:
+            track_name = current_track['item']['name']
+            artist_name = current_track['item']['artists'][0]['name']
+            self.song_label.config(text=f"{track_name} - {artist_name}")
+        else:
+            self.song_label.config(text="")
 
     def update_periodically(self):
         self.update_album_art_and_song()
-        self.after(5000, self.update_periodically)
+        self.after(3000, self.update_periodically)
 
     def toggle_menu_buttons(self):
         if self.menu_visible:
@@ -302,7 +296,7 @@ class Page2(tk.Frame):
         self.placeholder_image = self.create_placeholder_image(250, 250)
 
         self.update_album_art_and_song()
-        self.after(5000, self.update_periodically)
+        self.after(3000, self.update_periodically)
 
     def load_and_resize_icon(self, path, width, height):
         image = Image.open(path)
@@ -365,7 +359,7 @@ class Page2(tk.Frame):
             except Exception as e:
                 print(f"Error updating album art and song: {e}")
 
-        threading.Thread(target=fetch_album_art_and_song).start()
+        fetch_album_art_and_song()
 
     def display_album_art(self, url):
         def fetch_album_art():
@@ -460,7 +454,7 @@ class Page3(tk.Frame):
 
         # Update the song label periodically
         self.update_song_label()
-        self.after(5000, self.update_periodically)
+        self.after(3000, self.update_periodically)
 
     def load_playlists(self):
         def fetch_playlists():
@@ -553,26 +547,20 @@ class Page3(tk.Frame):
         return None
 
     def update_song_label(self):
-        def fetch_song_label():
-            try:
-                current_track = sp.current_playback()
-                if current_track and current_track['item']:
-                    track_id = current_track['item']['id']
-                    if track_id != self.last_track_id:
-                        self.last_track_id = track_id
-                        track_name = current_track['item']['name']
-                        artist_name = current_track['item']['artists'][0]['name']
-                        self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
-                else:
-                    self.song_label.config(text="Currently Playing: No music playing")
-            except Exception as e:
-                print(f"Error updating song: {e}")
-
-        threading.Thread(target=fetch_song_label).start()
+        current_track = sp.current_playback()
+        if current_track and current_track['item']:
+            track_id = current_track['item']['id']
+            if track_id != self.last_track_id:
+                self.last_track_id = track_id
+                track_name = current_track['item']['name']
+                artist_name = current_track['item']['artists'][0]['name']
+                self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
+        else:
+            self.song_label.config(text="Currently Playing: No music playing")
 
     def update_periodically(self):
         self.update_song_label()
-        self.after(5000, self.update_periodically)
+        self.after(3000, self.update_periodically)
 
 class PlaceholderEntry(tk.Entry):
     def __init__(self, master=None, placeholder="PLACEHOLDER", color='grey', *args, **kwargs):
