@@ -311,19 +311,17 @@ class Page2(tk.Frame):
 
     def play_music(self):
         sp.start_playback()
-        self.update_button_state(play=True)
+        self.button_play.grid_remove()
+        self.button_pause.grid()
+        self.update_album_art_and_song()
+        print("Playing music...")
 
     def pause_music(self):
         sp.pause_playback()
-        self.update_button_state(play=False)
-
-    def update_button_state(self, play):
-        if play:
-            self.button_play.grid_remove()
-            self.button_pause.grid()
-        else:
-            self.button_pause.grid_remove()
-            self.button_play.grid()
+        self.button_pause.grid_remove()
+        self.button_play.grid()
+        self.update_album_art_and_song()
+        print("Pausing music...")
 
     def skip_music(self):
         sp.next_track()
@@ -352,7 +350,12 @@ class Page2(tk.Frame):
                             album_art_url = album_images[0]['url']
                             self.display_album_art(album_art_url)
 
-                    self.update_button_state(current_track['is_playing'])
+                    if current_track['is_playing']:
+                        self.button_play.grid_remove()
+                        self.button_pause.grid()
+                    else:
+                        self.button_pause.grid_remove()
+                        self.button_play.grid()
                 else:
                     self.song_label.config(text="No music playing")
                     self.album_art_label.config(image=self.placeholder_image)
@@ -361,24 +364,21 @@ class Page2(tk.Frame):
 
         threading.Thread(target=fetch_album_art_and_song).start()
 
-    def display_album_art(self, url, retries=3):
-        def fetch_album_art(retries):
+    def display_album_art(self, url):
+        def fetch_album_art():
             try:
-                image_byt = requests.get(url, timeout=10).content
-                image_b64 = base64.b64encode(image_byt)
-                image_open = Image.open(io.BytesIO(base64.b64decode(image_b64)))
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                image_byt = response.content
+                image_open = Image.open(io.BytesIO(image_byt))
                 image_resized = image_open.resize((250, 250), Image.LANCZOS)
                 album_art_image = ImageTk.PhotoImage(image_resized)
                 self.album_art_label.config(image=album_art_image)
                 self.album_art_label.image = album_art_image
-            except Exception as e:
-                if retries > 0:
-                    print(f"Error fetching album art, retrying... ({retries} retries left)")
-                    fetch_album_art(retries - 1)
-                else:
-                    print(f"Error fetching album art: {e}")
+            except requests.RequestException as e:
+                print(f"Error fetching album art: {e}")
 
-        threading.Thread(target=fetch_album_art, args=(retries,)).start()
+        threading.Thread(target=fetch_album_art).start()
 
     def create_placeholder_image(self, width, height):
         placeholder = Image.new('RGB', (width, height), 'grey')
@@ -387,7 +387,6 @@ class Page2(tk.Frame):
     def update_periodically(self):
         self.update_album_art_and_song()
         self.after(5000, self.update_periodically)
-
 
 class Page3(tk.Frame):
     def __init__(self, parent, controller):
