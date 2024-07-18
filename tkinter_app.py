@@ -367,8 +367,8 @@ class Page2(tk.Frame):
 
         threading.Thread(target=fetch_album_art_and_song).start()
 
-    def display_album_art(self, url):
-        def fetch_album_art():
+    def display_album_art(self, url, retries=3):
+        def fetch_album_art(attempt=1):
             try:
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
@@ -379,7 +379,11 @@ class Page2(tk.Frame):
                 self.album_art_label.config(image=album_art_image)
                 self.album_art_label.image = album_art_image
             except requests.RequestException as e:
-                print(f"Error fetching album art: {e}")
+                if attempt <= retries:
+                    print(f"Attempt {attempt} failed, retrying...")
+                    self.after(3000, fetch_album_art, attempt + 1)  # Retry after 3 seconds
+                else:
+                    print(f"Error fetching album art: {e}")
 
         threading.Thread(target=fetch_album_art).start()
 
