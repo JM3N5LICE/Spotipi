@@ -10,6 +10,7 @@ import webbrowser
 import time
 import requests
 import io
+import base64
 
 # Load environment variables from .env file
 load_dotenv()
@@ -156,11 +157,28 @@ class Page1(tk.Frame):
         self.menu_frame.grid(row=0, column=0, sticky="ne", padx=10, pady=10)
 
         self.shutdown_button = tk.Button(self.menu_frame, text="Shutdown", command=self.shutdown, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
-        self.switch_device_button = tk.Button(self.menu_frame, text="Switch Device", command=self.show_devices, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
+        self.switch_device_button = tk.Button(self.menu_frame, text="Switch Device", command=self.toggle_device_tree, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
         self.launch_web_page_button = tk.Button(self.menu_frame, text="Launch Web Page", command=self.launch_web_page, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"))
 
         self.menu_buttons = [self.shutdown_button, self.switch_device_button, self.launch_web_page_button]
         self.menu_visible = False
+
+        for i, button in enumerate(self.menu_buttons):
+            button.grid(row=i, column=0, pady=5)
+
+        self.device_tree_frame = tk.Frame(self.menu_frame, bg="gray20")
+        self.device_tree = ttk.Treeview(self.device_tree_frame, columns=("Device Name",), show='headings', style="Custom.Treeview")
+        self.device_tree.heading("Device Name", text="Device Name")
+        self.device_tree.column("Device Name", minwidth=0, width=200)
+        self.device_tree.pack(expand=True, fill='both', side='left')
+
+        self.device_scroll = ttk.Scrollbar(self.device_tree_frame, orient="vertical", command=self.device_tree.yview)
+        self.device_tree.configure(yscrollcommand=self.device_scroll.set)
+        self.device_scroll.pack(side='right', fill='y')
+
+        self.device_tree.bind('<<TreeviewSelect>>', self.on_device_select)
+        self.device_tree_frame.grid(row=len(self.menu_buttons), column=0, pady=5)
+        self.device_tree_frame.grid_remove()
 
         self.update_time()
         self.update_album_art_and_song()
@@ -202,6 +220,14 @@ class Page1(tk.Frame):
                 button.grid(row=i, column=0, pady=5)
         self.menu_visible = not self.menu_visible
 
+    def toggle_device_tree(self):
+        if self.device_tree_frame.winfo_ismapped():
+            self.device_tree_frame.grid_remove()
+        else:
+            self.device_tree.delete(*self.device_tree.get_children())
+            self.load_devices()
+            self.device_tree_frame.grid()
+
     def launch_web_page(self):
         webbrowser.open('http://127.0.0.1:8888')
 
@@ -209,50 +235,26 @@ class Page1(tk.Frame):
         os.system("sudo poweroff")
 
     def show_devices(self):
-        device_window = tk.Toplevel(self)
-        device_window.title("Available Devices")
+        self.toggle_device_tree()
 
-        # Style for Treeview
-        style = ttk.Style()
-        style.configure("Device.Treeview", 
-                        font=("Helvetica", 14),
-                        rowheight=30,
-                        background='black',
-                        fieldbackground='black',
-                        foreground='grey')
+    def on_device_select(self, event):
+        selected_item = self.device_tree.selection()[0]
+        device_id = self.device_tree.item(selected_item, "tags")[0]
+        self.transfer_playback(device_id)
+        self.device_tree_frame.grid_remove()
 
-        # Create the Treeview inside the Toplevel window
-        columns = ("Device Name",)
-        device_tree = ttk.Treeview(device_window, columns=columns, show='headings', style="Device.Treeview")
-        device_tree.heading("Device Name", text="Device Name")
-        device_tree.column("Device Name", minwidth=0, width=300)
-        device_tree.pack(expand=True, fill='both', side='left')
-
-        device_scroll = ttk.Scrollbar(device_window, orient="vertical", command=device_tree.yview)
-        device_tree.configure(yscrollcommand=device_scroll.set)
-        device_scroll.pack(side='right', fill='y')
-
-        self.populate_device_list(device_tree)
-
-        # Hide the window when it loses focus
-        def on_focus_out(event):
-            device_window.withdraw()
-            device_tree.delete(*device_tree.get_children())
-            self.populate_device_list(device_tree)
-
-        device_window.bind("<FocusOut>", on_focus_out)
-
-    def populate_device_list(self, device_tree):
+    def load_devices(self):
         def fetch_devices():
-            devices = sp.devices()
-            device_list = devices.get('devices', [])
+            try:
+                devices = sp.devices()
+                device_list = devices.get('devices', [])
 
-            for device in device_list:
-                device_id = device.get('id')
-                device_name = device.get('name', 'Unknown Device')
-                device_tree.insert("", "end", values=(device_name,), tags=(device_id,))
-
-                print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
+                for device in device_list:
+                    device_id = device.get('id')
+                    device_name = device.get('name', 'Unknown Device')
+                    self.device_tree.insert("", "end", values=(device_name,), tags=(device_id,))
+            except Exception as e:
+                print(f"Error fetching devices: {e}")
 
         threading.Thread(target=fetch_devices).start()
 
