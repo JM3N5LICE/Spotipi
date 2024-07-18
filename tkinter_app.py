@@ -311,17 +311,21 @@ class Page2(tk.Frame):
 
     def play_music(self):
         sp.start_playback()
-        self.button_play.grid_remove()
-        self.button_pause.grid()
-        self.update_album_art_and_song()
+        self.update_button_state(play=True)
         print("Playing music...")
 
     def pause_music(self):
         sp.pause_playback()
-        self.button_pause.grid_remove()
-        self.button_play.grid()
-        self.update_album_art_and_song()
+        self.update_button_state(play=False)
         print("Pausing music...")
+
+    def update_button_state(self, play):
+        if play:
+            self.button_play.grid_remove()
+            self.button_pause.grid()
+        else:
+            self.button_pause.grid_remove()
+            self.button_play.grid()
 
     def skip_music(self):
         sp.next_track()
@@ -351,14 +355,13 @@ class Page2(tk.Frame):
                             self.display_album_art(album_art_url)
 
                     if current_track['is_playing']:
-                        self.button_play.grid_remove()
-                        self.button_pause.grid()
+                        self.update_button_state(play=True)
                     else:
-                        self.button_pause.grid_remove()
-                        self.button_play.grid()
+                        self.update_button_state(play=False)
                 else:
                     self.song_label.config(text="No music playing")
                     self.album_art_label.config(image=self.placeholder_image)
+                    self.update_button_state(play=False)
             except Exception as e:
                 print(f"Error updating album art and song: {e}")
 
