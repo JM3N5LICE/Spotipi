@@ -10,7 +10,6 @@ import webbrowser
 import time
 import requests
 import io
-import base64
 
 # Load environment variables from .env file
 load_dotenv()
@@ -210,34 +209,50 @@ class Page1(tk.Frame):
         os.system("sudo poweroff")
 
     def show_devices(self):
+        device_window = tk.Toplevel(self)
+        device_window.title("Available Devices")
+
+        # Style for Treeview
+        style = ttk.Style()
+        style.configure("Device.Treeview", 
+                        font=("Helvetica", 14),
+                        rowheight=30,
+                        background='black',
+                        fieldbackground='black',
+                        foreground='grey')
+
+        # Create the Treeview inside the Toplevel window
+        columns = ("Device Name",)
+        device_tree = ttk.Treeview(device_window, columns=columns, show='headings', style="Device.Treeview")
+        device_tree.heading("Device Name", text="Device Name")
+        device_tree.column("Device Name", minwidth=0, width=300)
+        device_tree.pack(expand=True, fill='both', side='left')
+
+        device_scroll = ttk.Scrollbar(device_window, orient="vertical", command=device_tree.yview)
+        device_tree.configure(yscrollcommand=device_scroll.set)
+        device_scroll.pack(side='right', fill='y')
+
+        self.populate_device_list(device_tree)
+
+        # Hide the window when it loses focus
+        def on_focus_out(event):
+            device_window.withdraw()
+            device_tree.delete(*device_tree.get_children())
+            self.populate_device_list(device_tree)
+
+        device_window.bind("<FocusOut>", on_focus_out)
+
+    def populate_device_list(self, device_tree):
         def fetch_devices():
             devices = sp.devices()
             device_list = devices.get('devices', [])
 
             for device in device_list:
-                print(f"Device ID: {device.get('id')}")
-                print(f"Name: {device.get('name')}")
-                print(f"Type: {device.get('type')}")
-                print(f"Active: {device.get('is_active')}")
-                print(f"Volume Percent: {device.get('volume_percent')}")
-                print(f"---")
+                device_id = device.get('id')
+                device_name = device.get('name', 'Unknown Device')
+                device_tree.insert("", "end", values=(device_name,), tags=(device_id,))
 
-            device_window = tk.Toplevel(self)
-            device_window.title("Available Devices")
-
-            if not device_list:
-                no_device_label = tk.Label(device_window, text="No available devices.", font=("Helvetica", 16))
-                no_device_label.pack(pady=20)
-            else:
-                for device in device_list:
-                    device_id = device.get('id')
-                    if device_id == "3cce004ba49b013d7a6f54aeb01eed318f834c97":
-                        continue  # Skip this device
-                    device_name = device.get('name', 'Unknown Device')
-                    device_button = tk.Button(device_window, text=device_name, command=lambda id=device_id: self.transfer_playback(id))
-                    device_button.pack(pady=5)
-
-                    print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
+                print(f"Device Name: {device_name}, Device ID: {device_id}, Type: {device.get('type')}, Active: {device.get('is_active')}, Volume Percent: {device.get('volume_percent')}")
 
         threading.Thread(target=fetch_devices).start()
 
