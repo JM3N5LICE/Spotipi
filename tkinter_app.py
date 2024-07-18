@@ -30,6 +30,9 @@ sp_oauth = SpotifyOAuth(client_id=CLIENT_ID,
 token_info = sp_oauth.get_access_token(as_dict=False)
 sp = spotipy.Spotify(auth=token_info)
 
+def launch_web_page():
+    webbrowser.open('http://127.0.0.1:8888')
+
 class MultiPageApp(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
@@ -424,7 +427,11 @@ class Page3(tk.Frame):
         self.playlist_tree = ttk.Treeview(playlist_frame, columns=columns, show='headings', style="Custom.Treeview")
         self.playlist_tree.heading("Playlist Name", text="Playlist Name")
         self.playlist_tree.column("Playlist Name", minwidth=0, width=150)
-        self.playlist_tree.pack(expand=True, fill='both')
+        self.playlist_tree.pack(expand=True, fill='both', side='left')
+
+        self.playlist_scroll = ttk.Scrollbar(playlist_frame, orient="vertical", command=self.playlist_tree.yview)
+        self.playlist_tree.configure(yscrollcommand=self.playlist_scroll.set)
+        self.playlist_scroll.pack(side='right', fill='y')
 
         self.playlist_tree.bind('<<TreeviewSelect>>', self.on_playlist_select)
 
@@ -432,7 +439,11 @@ class Page3(tk.Frame):
         self.track_tree = ttk.Treeview(track_frame, columns=columns, show='headings', style="Custom.Treeview")
         self.track_tree.heading("Track Name", text="Track Name")
         self.track_tree.column("Track Name", minwidth=0, width=300)
-        self.track_tree.pack(expand=True, fill='both')
+        self.track_tree.pack(expand=True, fill='both', side='left')
+
+        self.track_scroll = ttk.Scrollbar(track_frame, orient="vertical", command=self.track_tree.yview)
+        self.track_tree.configure(yscrollcommand=self.track_scroll.set)
+        self.track_scroll.pack(side='right', fill='y')
 
         self.track_tree.bind('<<TreeviewSelect>>', self.on_track_select)
 
@@ -610,12 +621,20 @@ class Page4(tk.Frame):
         self.results_tree.heading("Artist", text="Artist")
         self.results_tree.grid(row=1, column=0, columnspan=3, pady=10, padx=30, sticky="nsew")
 
+        self.results_scroll = ttk.Scrollbar(self, orient="vertical", command=self.results_tree.yview)
+        self.results_tree.configure(yscrollcommand=self.results_scroll.set)
+        self.results_scroll.grid(row=1, column=3, sticky='ns')
+
         self.search_entry = PlaceholderEntry(self, placeholder="Search a song or artist", textvariable=self.search_var, font=("Helvetica", 16))
         self.search_entry.grid(row=2, column=1, pady=10, sticky="ew", padx=10)
 
         self.playlist_tree = ttk.Treeview(self, columns=("Playlist Name",), show='headings', style="Custom.Treeview")
         self.playlist_tree.heading("Playlist Name", text="Playlist Name")
         self.playlist_tree.grid(row=1, column=3, rowspan=3, pady=10, padx=10, sticky="nsew")
+
+        self.playlist_scroll = ttk.Scrollbar(self, orient="vertical", command=self.playlist_tree.yview)
+        self.playlist_tree.configure(yscrollcommand=self.playlist_scroll.set)
+        self.playlist_scroll.grid(row=1, column=4, rowspan=3, sticky='ns')
 
         self.load_playlists()
 
