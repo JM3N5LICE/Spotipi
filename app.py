@@ -4,16 +4,15 @@ import base64
 import random
 import string
 import threading
-import tkinter_app  # Ensure this import works correctly
 import os
 import webbrowser
+import tkinter_app
 
 app = Flask(__name__)
 
 client_id = os.getenv('SPOTIPY_CLIENT_ID')
-client_secret = os.getenv('SPOTIPY_CLIENT_SECRET')  # Replace with your client secret
+client_secret = os.getenv('SPOTIPY_CLIENT_SECRET')
 redirect_uri = os.getenv('SPOTIPY_REDIRECT_URI')
-
 
 def generate_random_string(length):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
@@ -152,4 +151,3 @@ if __name__ == '__main__':
 
     # Start the Tkinter app in the main thread
     tkinter_app.startTkinter()
-

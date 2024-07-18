@@ -24,7 +24,7 @@ REDIRECT_URI = os.getenv('SPOTIPY_REDIRECT_URI')
 sp_oauth = SpotifyOAuth(client_id=CLIENT_ID,
                         client_secret=CLIENT_SECRET,
                         redirect_uri=REDIRECT_URI,
-                        scope='user-modify-playback-state user-read-playback-state')
+                        scope='user-modify-playback-state user-read-playback-state user-library-modify playlist-modify-public playlist-modify-private')
 
 # Get the token
 token_info = sp_oauth.get_access_token(as_dict=False)
@@ -41,12 +41,12 @@ class MultiPageApp(tk.Tk):
         self.container.grid_columnconfigure(0, weight=1)
 
         self.pages = {}
-        self.page_order = ["Page1", "Page2", "Page3"]
+        self.page_order = ["Page1", "Page2", "Page3", "Page4"]
 
         # Apply styles
         self.apply_styles()
 
-        for PageClass in (Page1, Page2, Page3):
+        for PageClass in (Page1, Page2, Page3, Page4):
             page_name = PageClass.__name__
             page = PageClass(self.container, self)
             self.pages[page_name] = page
@@ -503,13 +503,40 @@ class Page3(tk.Frame):
         self.play_track(track_uri)
 
     def play_track(self, track_uri):
-        playlist_uri = f"spotify:playlist:{self.current_playlist_id}"
-        sp.start_playback(context_uri=playlist_uri, offset={"uri": track_uri})
-        track_info = sp.track(track_uri)
-        track_name = track_info['name']
-        artist_name = track_info['artists'][0]['name']
-        self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
-        print(f"Playing track {track_uri}...")
+        current_track = sp.current_playback()
+        if not current_track or not current_track['is_playing']:
+            self.launch_sdk_and_play(track_uri)
+        else:
+            playlist_uri = f"spotify:playlist:{self.current_playlist_id}"
+            sp.start_playback(context_uri=playlist_uri, offset={"uri": track_uri})
+            track_info = sp.track(track_uri)
+            track_name = track_info['name']
+            artist_name = track_info['artists'][0]['name']
+            self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
+            print(f"Playing track {track_uri}...")
+
+    def launch_sdk_and_play(self, track_uri):
+        # Launch the SDK in the web browser
+        webbrowser.open('http://127.0.0.1:8888')
+        time.sleep(5)  # Give some time for the SDK to initialize
+
+        # Transfer playback to the SDK and play the track
+        device_id = self.get_sdk_device_id()
+        if device_id:
+            sp.transfer_playback(device_id)
+            sp.start_playback(uris=[track_uri])
+            track_info = sp.track(track_uri)
+            track_name = track_info['name']
+            artist_name = track_info['artists'][0]['name']
+            self.song_label.config(text=f"Currently Playing: {track_name} - {artist_name}")
+            print(f"Playing track {track_uri} on SDK...")
+
+    def get_sdk_device_id(self):
+        devices = sp.devices().get('devices', [])
+        for device in devices:
+            if device['name'] == 'Web Playback SDK Quick Start Player':
+                return device['id']
+        return None
 
     def update_song_label(self):
         def fetch_song_label():
@@ -533,6 +560,158 @@ class Page3(tk.Frame):
         self.update_song_label()
         self.after(5000, self.update_periodically)
 
+class PlaceholderEntry(tk.Entry):
+    def __init__(self, master=None, placeholder="PLACEHOLDER", color='grey', *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        self.placeholder = placeholder
+        self.placeholder_color = color
+        self.default_fg_color = self['fg']
+
+        self.bind("<FocusIn>", self.focus_in)
+        self.bind("<FocusOut>", self.focus_out)
+
+        self.put_placeholder()
+
+    def put_placeholder(self):
+        self.insert(0, self.placeholder)
+        self['fg'] = self.placeholder_color
+
+    def focus_in(self, *args):
+        if self['fg'] == self.placeholder_color:
+            self.delete('0', 'end')
+            self['fg'] = self.default_fg_color
+
+    def focus_out(self, *args):
+        if not self.get():
+            self.put_placeholder()
+
+class Page4(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent, bg='gray20')
+        self.controller = controller
+
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=3)
+        self.rowconfigure(2, weight=1)
+        self.rowconfigure(3, weight=1)
+        self.rowconfigure(4, weight=1)
+
+        self.search_var = tk.StringVar()
+        
+        self.search_label = tk.Label(self, text="Search for a Song", font=("Helvetica", 16), fg="grey", bg="gray20")
+        self.search_label.grid(row=0, column=1, pady=10, sticky="n")
+
+        self.results_tree = ttk.Treeview(self, columns=("Song", "Artist"), show='headings', style="Custom.Treeview")
+        self.results_tree.heading("Song", text="Song")
+        self.results_tree.heading("Artist", text="Artist")
+        self.results_tree.grid(row=1, column=0, columnspan=3, pady=10, padx=30, sticky="nsew")
+
+        self.search_entry = PlaceholderEntry(self, placeholder="Search a song or artist", textvariable=self.search_var, font=("Helvetica", 16))
+        self.search_entry.grid(row=2, column=1, pady=10, sticky="ew", padx=10)
+
+        self.playlist_tree = ttk.Treeview(self, columns=("Playlist Name",), show='headings', style="Custom.Treeview")
+        self.playlist_tree.heading("Playlist Name", text="Playlist Name")
+        self.playlist_tree.grid(row=1, column=3, rowspan=3, pady=10, padx=10, sticky="nsew")
+
+        self.load_playlists()
+
+        self.btn_frame = tk.Frame(self, bg="gray20")
+        self.btn_frame.grid(row=3, column=1, sticky="ew", padx=10, pady=10)
+
+        self.search_button = tk.Button(self.btn_frame, text="Search", command=self.search_song, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"), height=1, width=20)
+        self.search_button.pack(side="top", expand=True, fill="both", pady=5, padx=10)
+
+        self.add_to_playlist_button = tk.Button(self.btn_frame, text="Add to Playlist", command=self.add_to_playlist, bg="#4CAF50", fg="grey", font=("Helvetica", 12, "bold"), height=1, width=20)
+        self.add_to_playlist_button.pack(side="top", expand=True, fill="both", pady=5, padx=10)
+
+        self.results_tree.bind('<<TreeviewSelect>>', self.on_song_select)
+        self.playlist_tree.bind('<<TreeviewSelect>>', self.on_playlist_select)
+
+        self.search_results = []
+        self.selected_track_uri = None
+
+    def load_playlists(self):
+        def fetch_playlists():
+            try:
+                playlists = sp.current_user_playlists()
+                for playlist in playlists['items']:
+                    self.playlist_tree.insert("", "end", values=(playlist['name'],), tags=(playlist['id'],))
+            except Exception as e:
+                print(f"Error fetching playlists: {e}")
+
+        threading.Thread(target=fetch_playlists).start()
+
+    def search_song(self):
+        def fetch_songs():
+            query = self.search_var.get()
+            if query:
+                results = sp.search(q=query, type="track", limit=20)
+                tracks = results.get('tracks', {}).get('items', [])
+
+                for item in self.results_tree.get_children():
+                    self.results_tree.delete(item)
+
+                self.search_results = []
+                for track in tracks:
+                    track_name = track['name']
+                    artist_name = track['artists'][0]['name']
+                    self.results_tree.insert("", "end", values=(track_name, artist_name), tags=(track['uri'],))
+                    self.search_results.append(track)
+
+        threading.Thread(target=fetch_songs).start()
+
+    def on_song_select(self, event):
+        selected_item = self.results_tree.selection()[0]
+        track_uri = self.results_tree.item(selected_item, "tags")[0]
+        self.selected_track_uri = track_uri
+        self.play_track(track_uri)
+
+    def play_track(self, track_uri):
+        current_track = sp.current_playback()
+        if not current_track or not current_track['is_playing']:
+            self.launch_sdk_and_play(track_uri)
+        else:
+            sp.start_playback(uris=[track_uri])
+            track_info = sp.track(track_uri)
+            track_name = track_info['name']
+            artist_name = track_info['artists'][0]['name']
+            print(f"Playing track {track_uri}...")
+
+    def launch_sdk_and_play(self, track_uri):
+        # Launch the SDK in the web browser
+        webbrowser.open('http://127.0.0.1:8888')
+        time.sleep(5)  # Give some time for the SDK to initialize
+
+        # Transfer playback to the SDK and play the track
+        device_id = self.get_sdk_device_id()
+        if device_id:
+            sp.transfer_playback(device_id)
+            sp.start_playback(uris=[track_uri])
+            track_info = sp.track(track_uri)
+            track_name = track_info['name']
+            artist_name = track_info['artists'][0]['name']
+            print(f"Playing track {track_uri} on SDK...")
+
+    def get_sdk_device_id(self):
+        devices = sp.devices().get('devices', [])
+        for device in devices:
+            if device['name'] == 'Web Playback SDK Quick Start Player':
+                return device['id']
+        return None
+
+    def on_playlist_select(self, event):
+        selected_item = self.playlist_tree.selection()[0]
+        playlist_id = self.playlist_tree.item(selected_item, "tags")[0]
+        self.add_to_playlist(playlist_id)
+
+    def add_to_playlist(self, playlist_id):
+        if self.selected_track_uri:
+            sp.user_playlist_add_tracks(user=sp.current_user()['id'], playlist_id=playlist_id, tracks=[self.selected_track_uri])
+            print(f"Added {self.selected_track_uri} to playlist {playlist_id}.")
 
 def startTkinter():
     app = MultiPageApp()
