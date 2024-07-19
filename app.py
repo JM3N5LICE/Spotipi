@@ -7,12 +7,17 @@ import threading
 import os
 import webbrowser
 import tkinter_app
+import requests
 
 app = Flask(__name__)
 
 client_id = os.getenv('SPOTIPY_CLIENT_ID')
 client_secret = os.getenv('SPOTIPY_CLIENT_SECRET')
 redirect_uri = os.getenv('SPOTIPY_REDIRECT_URI')
+
+print(client_id, client_secret, redirect_uri)
+response = requests.get('https://accounts.spotify.com')
+print(response.status_code)
 
 def generate_random_string(length):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
